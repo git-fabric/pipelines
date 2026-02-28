@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true
+  },
+  "include": [
+    "shared/**/*",
+    "1-security-triage/**/*",
+    "2-gitops-observer/**/*",
+    "3-network-audit/**/*",
+    "4-proxmox-k8s/**/*",
+    "5-ops-chat/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

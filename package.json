@@ -1,0 +1,25 @@
+{
+  "name": "@git-fabric/pipelines",
+  "version": "0.1.0",
+  "description": "Automated fabric pipelines — composing gateway tools into ambient homelab intelligence",
+  "author": "git-fabric",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
