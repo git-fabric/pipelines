@@ -96,7 +96,8 @@ async function run(): Promise<void> {
     project: 'security-triage',
     systemPrompt:
       'You are a security analyst reviewing homelab security alerts. ' +
-      'Be concise, prioritize by severity and exploitability, and suggest specific remediation steps.',
+      'Be concise, prioritize by severity and exploitability, and suggest specific remediation steps. ' +
+      'All data has been gathered already — do NOT call any tools, analyze only what is provided.',
   });
 
   const contextLines = [
@@ -130,7 +131,10 @@ async function run(): Promise<void> {
 
   const summary = await sendMessage(
     session,
-    'Summarize these security findings and prioritize remediation. ' +
+    `Here is the security data gathered at ${new Date().toISOString()}:\n\n` +
+      contextLines.join('\n') +
+      '\n\n---\n' +
+      'Based ONLY on the data above (do not call any tools), summarize these security findings and prioritize remediation. ' +
       'Group by severity, identify any CVEs with available patches, ' +
       'and list the top 3 actions to take immediately.',
   );

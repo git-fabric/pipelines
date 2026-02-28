@@ -159,14 +159,18 @@ async function run(): Promise<void> {
     systemPrompt:
       'You are a network security auditor reviewing homelab network coverage. ' +
       'Focus on: devices not monitored by Sandfly, stale DNS entries pointing nowhere, ' +
-      'unknown devices on the network, and inactive Sandfly hosts that should be active.',
+      'unknown devices on the network, and inactive Sandfly hosts that should be active. ' +
+      'All data has been gathered already — do NOT call any tools, analyze only what is provided.',
   });
 
   await injectContext(session, contextLines.join('\n'));
 
   const report = await sendMessage(
     session,
-    'Identify coverage gaps, stale DNS entries, and unknown or unmonitored devices. ' +
+    `Here is the network audit data gathered at ${new Date().toISOString()}:\n\n` +
+      contextLines.join('\n') +
+      '\n\n---\n' +
+      'Based ONLY on the data above (do not call any tools), identify coverage gaps, stale DNS entries, and unknown or unmonitored devices. ' +
       'Provide a prioritized list of remediation actions.',
   );
 

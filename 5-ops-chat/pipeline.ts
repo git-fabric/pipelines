@@ -150,15 +150,19 @@ async function run(): Promise<void> {
       'The homelab runs: 3 master + 4 worker k3s nodes, ArgoCD GitOps, Sandfly security monitoring, ' +
       'Proxmox hypervisor, Tailscale mesh, UniFi networking, and Cloudflare DNS. ' +
       'Be concise. Use sections: Health, Security, Network, Infrastructure, Action Items. ' +
-      'Only call out things that need attention — skip "everything is fine" noise.',
+      'Only call out things that need attention — skip "everything is fine" noise. ' +
+      'All data has been gathered already — do NOT call any tools, analyze only what is provided.',
   });
 
   await injectContext(session, contextLines.join('\n'));
 
   const briefing = await sendMessage(
     session,
-    'Give me a concise daily ops briefing: cluster health, security posture, network status, ' +
-      'and anything needing attention today. Keep it under 400 words.',
+    `Here is the operational data gathered at ${new Date().toISOString()}:\n\n` +
+      contextLines.join('\n') +
+      '\n\n---\n' +
+      'Based ONLY on the data above (do not call any tools), give me a concise daily ops briefing: ' +
+      'cluster health, security posture, network status, and anything needing attention today. Keep it under 400 words.',
   );
 
   console.log(`[${PIPELINE}] briefing:\n`);

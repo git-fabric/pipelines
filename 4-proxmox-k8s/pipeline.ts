@@ -207,14 +207,18 @@ async function run(): Promise<void> {
     project: 'infra-correlation',
     systemPrompt:
       'You are an infrastructure engineer correlating Proxmox hypervisor state with Kubernetes. ' +
-      'Focus on VM/node state mismatches and storage health issues that could affect cluster stability.',
+      'Focus on VM/node state mismatches and storage health issues that could affect cluster stability. ' +
+      'All data has been gathered already — do NOT call any tools, analyze only what is provided.',
   });
 
   await injectContext(session, contextLines.join('\n'));
 
   const analysis = await sendMessage(
     session,
-    'Are there any infrastructure inconsistencies to address? ' +
+    `Here is the infrastructure correlation data gathered at ${new Date().toISOString()}:\n\n` +
+      contextLines.join('\n') +
+      '\n\n---\n' +
+      'Based ONLY on the data above (do not call any tools), are there any infrastructure inconsistencies to address? ' +
       'Explain each mismatch, its likely cause, and the recommended fix.',
   );
 

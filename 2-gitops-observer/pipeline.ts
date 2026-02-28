@@ -112,19 +112,25 @@ async function run(): Promise<void> {
     );
   }
 
-  // Chat: diagnose
+  // Chat: diagnose — embed all data directly in the message so Claude doesn't
+  // need to call out to tools (the agentic loop is disabled by not setting FABRIC_GATEWAY_URL
+  // inside the message, but we include all data inline to be safe).
   const session = await createSession({
     project: 'gitops-observer',
     systemPrompt:
       'You are a Kubernetes and GitOps SRE. Diagnose cluster issues concisely. ' +
-      'Identify root causes, not symptoms. Suggest specific kubectl or ArgoCD commands to fix issues.',
+      'Identify root causes, not symptoms. Suggest specific kubectl or ArgoCD commands to fix issues. ' +
+      'The cluster data below has already been gathered — do NOT call any tools, just analyze what is provided.',
   });
 
   await injectContext(session, contextLines.join('\n'));
 
   const diagnosis = await sendMessage(
     session,
-    "What's wrong and what should be fixed? " +
+    `Here is the live cluster state gathered at ${new Date().toISOString()}:\n\n` +
+      contextLines.join('\n') +
+      '\n\n---\n' +
+      "Based ONLY on the data above (do not call any tools), diagnose what's wrong and what should be fixed. " +
       'List each issue with: (1) root cause, (2) affected resources, (3) exact fix command.',
   );
 
