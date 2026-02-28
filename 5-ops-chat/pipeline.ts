@@ -151,7 +151,6 @@ async function run(): Promise<void> {
       'Proxmox hypervisor, Tailscale mesh, UniFi networking, and Cloudflare DNS. ' +
       'Be concise. Use sections: Health, Security, Network, Infrastructure, Action Items. ' +
       'Only call out things that need attention — skip "everything is fine" noise.',
-    tags: ['automated', 'daily-briefing'],
   });
 
   await injectContext(session, contextLines.join('\n'));

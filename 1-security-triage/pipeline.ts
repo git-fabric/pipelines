@@ -97,7 +97,6 @@ async function run(): Promise<void> {
     systemPrompt:
       'You are a security analyst reviewing homelab security alerts. ' +
       'Be concise, prioritize by severity and exploitability, and suggest specific remediation steps.',
-    tags: ['automated', 'security-triage'],
   });
 
   const contextLines = [

@@ -208,7 +208,6 @@ async function run(): Promise<void> {
     systemPrompt:
       'You are an infrastructure engineer correlating Proxmox hypervisor state with Kubernetes. ' +
       'Focus on VM/node state mismatches and storage health issues that could affect cluster stability.',
-    tags: ['automated', 'infra-correlation'],
   });
 
   await injectContext(session, contextLines.join('\n'));

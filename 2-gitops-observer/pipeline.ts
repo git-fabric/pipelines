@@ -118,7 +118,6 @@ async function run(): Promise<void> {
     systemPrompt:
       'You are a Kubernetes and GitOps SRE. Diagnose cluster issues concisely. ' +
       'Identify root causes, not symptoms. Suggest specific kubectl or ArgoCD commands to fix issues.',
-    tags: ['automated', 'gitops-observer'],
   });
 
   await injectContext(session, contextLines.join('\n'));

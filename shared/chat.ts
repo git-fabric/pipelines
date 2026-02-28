@@ -16,16 +16,18 @@ export async function createSession(opts: {
   project: string;
   systemPrompt?: string;
   model?: string;
-  tags?: string[];
+  title?: string;
 }): Promise<Session> {
   const result = (await callTool('chat_session_create', {
     project: opts.project,
-    system_prompt: opts.systemPrompt,
+    systemPrompt: opts.systemPrompt,
     model: opts.model ?? 'claude-sonnet-4-6',
-    tags: opts.tags ?? [],
-  })) as { id: string };
+    title: opts.title,
+  })) as { sessionId?: string; id?: string };
 
-  return { id: result.id, project: opts.project };
+  const id = result.sessionId ?? result.id;
+  if (!id) throw new Error(`chat_session_create returned no session ID: ${JSON.stringify(result)}`);
+  return { id, project: opts.project };
 }
 
 /**
@@ -36,8 +38,8 @@ export async function injectContext(
   context: string,
 ): Promise<void> {
   await callTool('chat_context_inject', {
-    session_id: session.id,
-    content: context,
+    sessionId: session.id,
+    context,
   });
 }
 
@@ -49,24 +51,30 @@ export async function sendMessage(
   message: string,
 ): Promise<string> {
   const result = (await callTool('chat_message_send', {
-    session_id: session.id,
-    message,
-  })) as { response?: string; content?: string; text?: string };
+    sessionId: session.id,
+    content: message,
+  })) as { response?: string; content?: string; text?: string; message?: string };
 
-  return result.response ?? result.content ?? result.text ?? JSON.stringify(result);
+  return (
+    result.response ??
+    result.content ??
+    result.text ??
+    result.message ??
+    JSON.stringify(result)
+  );
 }
 
 /**
- * Search recent sessions for findings within a time window.
+ * Search recent sessions for findings.
  */
 export async function searchSessions(opts: {
   query: string;
   project?: string;
-  hoursBack?: number;
+  limit?: number;
 }): Promise<unknown> {
   return callTool('chat_search', {
     query: opts.query,
     project: opts.project,
-    since_hours: opts.hoursBack ?? 24,
+    limit: opts.limit ?? 10,
   });
 }

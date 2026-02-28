@@ -160,7 +160,6 @@ async function run(): Promise<void> {
       'You are a network security auditor reviewing homelab network coverage. ' +
       'Focus on: devices not monitored by Sandfly, stale DNS entries pointing nowhere, ' +
       'unknown devices on the network, and inactive Sandfly hosts that should be active.',
-    tags: ['automated', 'network-audit', 'daily'],
   });
 
   await injectContext(session, contextLines.join('\n'));
