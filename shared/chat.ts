@@ -32,15 +32,24 @@ export async function createSession(opts: {
 
 /**
  * Inject context text into a session before the first user message.
+ * Retries once on 409 conflict (git state repo SHA race).
  */
 export async function injectContext(
   session: Session,
   context: string,
 ): Promise<void> {
-  await callTool('chat_context_inject', {
-    sessionId: session.id,
-    context,
-  });
+  try {
+    await callTool('chat_context_inject', { sessionId: session.id, context });
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes('409') || msg.includes('conflict')) {
+      // Wait 2s for the state repo to settle, then retry once
+      await new Promise((r) => setTimeout(r, 2000));
+      await callTool('chat_context_inject', { sessionId: session.id, context });
+    } else {
+      throw err;
+    }
+  }
 }
 
 /**
