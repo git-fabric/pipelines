@@ -63,9 +63,9 @@ async function run(): Promise<void> {
 
   // 2. Search recent sessions for findings
   const [securityFindings, gitopsFindings, networkFindings] = await Promise.allSettled([
-    searchSessions({ query: 'security alerts CVE triage', project: 'security-triage', hoursBack: 24 }),
-    searchSessions({ query: 'failing pods ArgoCD degraded', project: 'gitops-observer', hoursBack: 24 }),
-    searchSessions({ query: 'network gaps coverage stale DNS', project: 'network-audit', hoursBack: 48 }),
+    searchSessions({ query: 'security alerts CVE triage', project: 'security-triage', limit: 5 }),
+    searchSessions({ query: 'failing pods ArgoCD degraded', project: 'gitops-observer', limit: 5 }),
+    searchSessions({ query: 'network gaps coverage stale DNS', project: 'network-audit', limit: 5 }),
   ]);
 
   console.log(`[${PIPELINE}] session search complete`);
