@@ -17,6 +17,8 @@
 
 import { callTool } from '../shared/gateway.js';
 import { createSession, injectContext, sendMessage } from '../shared/chat.js';
+import { dispatchKubectl } from '../shared/dispatch.js';
+import { recordIncident } from '../shared/metrics.js';
 
 const PIPELINE = '2-gitops-observer';
 
@@ -136,7 +138,7 @@ async function run(): Promise<void> {
 
   console.log(`[${PIPELINE}] diagnosis:\n${diagnosis}`);
 
-  // Open a GitHub issue via PR to capture the diagnosis
+  // Shared vars for PR and dispatch
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const issueSummary = [
     hasPodProblems && `${pods.length} failing pod(s)`,
@@ -144,6 +146,37 @@ async function run(): Promise<void> {
   ]
     .filter(Boolean)
     .join(', ');
+
+  // Phase 5: Parse diagnosis for actionable kubectl commands and dispatch them
+  const jobIdBase = `gitops-observer/${timestamp}`;
+  const kubectlPattern = /kubectl\s+((?:rollout restart|scale|delete pod|annotate|label)\s+[^\n`]+)/gi;
+  const autoFixes: string[] = [];
+  for (const match of diagnosis.matchAll(kubectlPattern)) {
+    const cmd = match[1].trim().replace(/`/g, '');
+    autoFixes.push(cmd);
+  }
+
+  if (autoFixes.length > 0) {
+    console.log(`[${PIPELINE}] dispatching ${autoFixes.length} auto-fix(es):`);
+    for (let i = 0; i < autoFixes.length; i++) {
+      const cmd = autoFixes[i];
+      console.log(`  [${i + 1}] kubectl ${cmd}`);
+      const result = await dispatchKubectl({
+        command: cmd,
+        jobId: `${jobIdBase}-fix-${i + 1}`,
+        reason: `gitops-observer auto-fix: ${issueSummary}`,
+      });
+      if (result.dispatched) {
+        console.log(`  -> dispatched: ${result.runUrl}`);
+      } else {
+        console.warn(`  -> dispatch failed: ${result.error}`);
+      }
+    }
+  } else {
+    console.log(`[${PIPELINE}] no auto-dispatchable kubectl commands found in diagnosis`);
+  }
+
+  // Open a GitHub issue via PR to capture the diagnosis
 
   const branchName = `gitops-observer/${timestamp}`;
   const prBody =
@@ -180,6 +213,16 @@ async function run(): Promise<void> {
   } catch (err) {
     console.warn(`[${PIPELINE}] git_pr_create failed (non-fatal):`, err);
   }
+
+  // Record MTTR incident metric
+  await recordIncident({
+    ts: new Date().toISOString(),
+    pipeline: PIPELINE,
+    issue: issueSummary,
+    severity: pods.length > 0 ? 'high' : 'medium',
+    autoDispatched: autoFixes.length > 0,
+    dispatchCount: autoFixes.length,
+  });
 
   console.log(`[${PIPELINE}] done`);
 }

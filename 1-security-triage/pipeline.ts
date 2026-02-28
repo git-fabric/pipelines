@@ -15,6 +15,8 @@
 
 import { callTool } from '../shared/gateway.js';
 import { createSession, injectContext, sendMessage } from '../shared/chat.js';
+import { dispatchKubectl } from '../shared/dispatch.js';
+import { recordIncident } from '../shared/metrics.js';
 
 const PIPELINE = '1-security-triage';
 
@@ -141,6 +143,26 @@ async function run(): Promise<void> {
 
   console.log(`[${PIPELINE}] summary:\n${summary}`);
 
+  // Phase 5: Dispatch kubectl rollout restart for any affected fabric deployments
+  // Claude will mention specific deployments in the summary when they need patching
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fabricDeployPattern = /rollout restart deploy\/(fabric-[a-z-]+)\s+-n\s+(cortex-system)/gi;
+  const restarts: Array<{ deploy: string; ns: string }> = [];
+  for (const match of summary.matchAll(fabricDeployPattern)) {
+    restarts.push({ deploy: match[1], ns: match[2] });
+  }
+
+  if (restarts.length > 0) {
+    console.log(`[${PIPELINE}] dispatching ${restarts.length} restart(s) for affected fabric deployments`);
+    for (const { deploy, ns } of restarts) {
+      await dispatchKubectl({
+        command: `rollout restart deploy/${deploy} -n ${ns}`,
+        jobId: `security-triage/${timestamp}/${deploy}`,
+        reason: `security-triage: CVE patch rollout for ${deploy}`,
+      });
+    }
+  }
+
   // 7. Open a PR in the state repo as a durable record
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const branchName = `security-triage/${timestamp}`;
@@ -180,6 +202,17 @@ async function run(): Promise<void> {
   } catch (err) {
     console.warn(`[${PIPELINE}] git_pr_create failed (non-fatal):`, err);
   }
+
+  // Record MTTR incident metric
+  const criticalAlerts = alerts.filter((a) => a.severity === 'critical' || a.severity === 'high');
+  await recordIncident({
+    ts: new Date().toISOString(),
+    pipeline: PIPELINE,
+    issue: `${alerts.length} alert(s), ${cveIds.length} CVE(s): ${cveIds.join(', ') || 'none'}`,
+    severity: criticalAlerts.length > 0 ? 'critical' : alerts.length > 0 ? 'high' : 'info',
+    autoDispatched: restarts.length > 0,
+    dispatchCount: restarts.length,
+  });
 
   console.log(`[${PIPELINE}] done`);
 }
