@@ -45,11 +45,9 @@ function extractCveIds(alerts: SandflyAlert[]): string[] {
 async function run(): Promise<void> {
   console.log(`[${PIPELINE}] starting`);
 
-  // 1. Fetch unacknowledged Sandfly alerts from the last 6 hours
-  const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  // 1. Fetch recent Sandfly alerts (last ~6 hours via limit)
   const alertsResult = (await callTool('sandfly_get_alerts', {
-    acknowledged: false,
-    since,
+    limit: 100,
   })) as { alerts?: SandflyAlert[] } | SandflyAlert[];
 
   const alerts: SandflyAlert[] = Array.isArray(alertsResult)
@@ -103,7 +101,7 @@ async function run(): Promise<void> {
   });
 
   const contextLines = [
-    `## Sandfly Alerts (${alerts.length} unacknowledged since ${since})`,
+    `## Sandfly Alerts (${alerts.length} recent alerts)`,
     '```json',
     JSON.stringify(alerts, null, 2),
     '```',
@@ -143,9 +141,11 @@ async function run(): Promise<void> {
 
   console.log(`[${PIPELINE}] summary:\n${summary}`);
 
+  // 7. Open a PR in the state repo as a durable record
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
   // Phase 5: Dispatch kubectl rollout restart for any affected fabric deployments
   // Claude will mention specific deployments in the summary when they need patching
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const fabricDeployPattern = /rollout restart deploy\/(fabric-[a-z-]+)\s+-n\s+(cortex-system)/gi;
   const restarts: Array<{ deploy: string; ns: string }> = [];
   for (const match of summary.matchAll(fabricDeployPattern)) {
@@ -162,9 +162,6 @@ async function run(): Promise<void> {
       });
     }
   }
-
-  // 7. Open a PR in the state repo as a durable record
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const branchName = `security-triage/${timestamp}`;
   const prBody =
     `## Automated Security Triage\n\n` +

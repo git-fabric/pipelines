@@ -121,17 +121,31 @@ async function run(): Promise<void> {
   console.log(`[${PIPELINE}] starting`);
 
   // Gather Proxmox + k8s data in parallel
-  const [pveNodes, pveVms, k8sNodes, longhornVols, pveStorage] = await Promise.all([
+  const [pveNodes, pveVms, k8sNodes, longhornVols] = await Promise.all([
     callTool('pve_list_nodes', {}),
     callTool('pve_list_vms', {}),
     callTool('k8s_list_nodes', {}),
     callTool('k8s_list_longhorn_volumes', {}),
-    callTool('pve_get_storage_status', {}),
-  ]) as [unknown, unknown, unknown, unknown, unknown];
+  ]) as [unknown, unknown, unknown, unknown];
 
   const vms = (Array.isArray(pveVms) ? pveVms : []) as PveVm[];
   const nodes = (Array.isArray(k8sNodes) ? k8sNodes : []) as K8sNode[];
   const pveN = (Array.isArray(pveNodes) ? pveNodes : []) as PveNode[];
+
+  // Get storage for each Proxmox node (pve_list_storage requires a node name)
+  const pveStorageByNode: Record<string, unknown> = {};
+  await Promise.all(
+    pveN.map(async (n) => {
+      if (n.node) {
+        try {
+          pveStorageByNode[n.node] = await callTool('pve_list_storage', { node: n.node });
+        } catch {
+          pveStorageByNode[n.node] = null;
+        }
+      }
+    }),
+  );
+  const pveStorage = pveStorageByNode;
 
   console.log(
     `[${PIPELINE}] pve nodes: ${pveN.length}, vms: ${vms.length}, k8s nodes: ${nodes.length}`,
